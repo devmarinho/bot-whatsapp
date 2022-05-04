@@ -22,6 +22,7 @@
     "fs-extra": "^9.0.1",
     "google-tts-api": "^2.0.2",
     "got": "^11.7.0",
+    "lighthouse": "^9.5.0",
     "moment-timezone": "^0.5.31",
     "node-fetch": "^2.6.1",
     "request": "^2.88.2"

@@ -23,8 +23,6 @@ const credentials = {
 	private_key: config.GOOGLE_PRIVATE_KEY,
 };
 
-const tokenConsultas = process.env.TOKEN_CONSULTAS;
-const URLBaseConsultas = process.env.BASE_URL_CONSULTAS;
 
 const sessionClient = new dialogflow.SessionsClient({
 	projectId: config.GOOGLE_PROJECT_ID,
@@ -103,8 +101,8 @@ module.exports = msgHandler = async (client, message) => {
 		let { pushname, verifiedName } = sender;
 		pushname = pushname || verifiedName;
 		const commands = caption || body || '';
-		const falas = commands.toLowerCase();
-		const command = commands.toLowerCase().split(' ')[0] || '';
+		const falas = commands.toLowerCase().trim();
+		const command = getCommand(commands)
 		const args = commands.split(' ');
 
 		if (silenceBannedUsers.includes(chat.id)) {
@@ -170,6 +168,7 @@ module.exports = msgHandler = async (client, message) => {
 		console.log('ARGUMENTOS	===>', color(args));
 		console.log('FALAS 		===>', color(falas));
 		console.log('COMANDO 	===>', color(command));
+
 		
 		if (command.startsWith('!') && bannedUsers.includes(chat.id)) {
 			await client.sendText(from, '*_Você foi banido, não pode usar o bot. :(_*', id);
@@ -203,10 +202,6 @@ module.exports = msgHandler = async (client, message) => {
 			case 'toca o berrante bot':
 			case 'toca o berrante savio':
 				await client.sendFile(from, './media/berrante.mpeg', 'Toca o berrante seu moço', 'AAAAAAAAAUHHH', id);
-				break;
-
-			case 'trem bala':
-				await client.sendFile(from, './media/trembala.mpeg', 'Trem bala', 'AAAAAAAAAUHHH', id);
 				break;
 
 			case 'vamos acordar':
@@ -290,14 +285,18 @@ module.exports = msgHandler = async (client, message) => {
 			case 'bot como vc esta?':
 			case 'oi bot como vc esta?':
 			case 'oi bot como vc ta?':
-				const gif99 = await fs.readFileSync('./media/tranquilao.webp', { encoding: 'base64' });
+				const gif99 = fs.readFileSync('./media/tranquilao.webp', { encoding: 'base64' });
 				await client.sendImageAsSticker(from, `data:image/gif;base64,${gif99.toString('base64')}`);
 				break;
 
 			case 'fala bot':
 				await client.reply(from, 'Fala você... ou digite: !ajuda', id);
-				const gif4 = await fs.readFileSync('./media/pensando.webp', { encoding: 'base64' });
+				const gif4 = fs.readFileSync('./media/pensando.webp', { encoding: 'base64' });
 				await client.sendImageAsSticker(from, `data:image/gif;base64,${gif4.toString('base64')}`);
+				break;
+			case 'shalom':
+			case 'shalon':
+				await client.reply(from, 'Shalom para você também', id);
 				break;
 		}
 
@@ -318,151 +317,6 @@ module.exports = msgHandler = async (client, message) => {
 				}
 
 				break;
-
-			case '!cpf':
-				if (chat.id == '555591441492-1588522560@g.us') return client.reply(from, 'Consultas não são permitidas nesse grupo. Tente no PV', id);
-				if (args.length === 1) return client.reply(from, 'Ainda não adivinho coisas... preciso saber o CPF também!', id);
-				
-				let cpf = args[1].match(/\d/g);
-				if (!cpf) return client.reply(from, 'Digite um CPF válido.', id);
-				cpf = cpf.join('');
-				if (cpf.length !== 11) return client.reply(from, 'Digite um CPF válido.', id);
-				await axios.post(`${URLBaseConsultas}/api/PF/CPF`, [cpf], {
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'Authorization': `Bearer ${tokenConsultas}`
-					}
-				}).then(async (response) => {
-					const { data } = response;
-					if (data.header.error === null) {
-						const result = data.result[0];
-						const cadastral = result.pessoa;
-						const {cadastral: pessoa, contato} = cadastral;
-						const telefone = contato.telefone;
-						const {CPF, nomePrimeiro, nomeMeio, nomeUltimo, sexo, dataNascimento, statusReceitaFederal, rgNumero, rgOrgaoEmissor, rgUf, tituloEleitoral, nacionalidade, estadoCivil, maeCPF, maeNomePrimeiro, maeNomeMeio, maeNomeUltimo} = pessoa;
-						const nomeCompleto = `${nomePrimeiro || ''} ${nomeMeio || ''} ${nomeUltimo || ''}`;
-						const nomeCompletoMae = `${maeNomePrimeiro || ''} ${maeNomeMeio || ''} ${maeNomeUltimo || ''}`;
-						let telefones
-						if (telefone.length === 0) {
-							telefones = 'Nenhum telefone encontrado.';
-						} else if (telefone.length === 1) {
-							const {ddd, numero, operadora} = telefone[0];
-							telefones = `Telefone: (${ddd}) ${numero} - ${operadora}`;
-						} else if (telefone.length > 1) {
-							telefones = telefone.map(telefone => `Telefone: (${telefone.ddd}) ${telefone.numero} ${telefone.operadora ? '- '+telefone.operadora : ''}`).join('\n');
-						}
-						const stringToSend = `
-*=== CONSULTA REALIZADA ===* ${CPF ? '\nCPF: '+CPF : ''} ${nomeCompleto ? '\nNome: '+nomeCompleto : ''} ${sexo ? '\nSexo: '+sexo : ''} ${dataNascimento ? '\nData de nascimento: '+moment(dataNascimento).format('DD/MM/YYYY') : ''} ${statusReceitaFederal ? '\nStatus da receita federal: '+statusReceitaFederal : ''} ${rgNumero ? '\nRG: '+rgNumero : ''} ${rgOrgaoEmissor ? '\nOrgão emissor: '+rgOrgaoEmissor : ''} ${rgUf ? '\nUF: '+rgUf : ''} ${tituloEleitoral ? '\nTítulo de eleitor: '+tituloEleitoral : ''} ${nacionalidade ? '\nNacionalidade: '+nacionalidade : ''} ${estadoCivil ? '\nEstado civil: '+estadoCivil : ''} ${maeCPF ? '\nCPF da Mãe: '+maeCPF : ''} ${nomeCompletoMae !== '  ' ? '\nNome da Mãe: '+nomeCompletoMae : ''}
-
-*TELEFONES*
-${telefones}
-
-Consultado por: ${pushname}`;
-						await client.reply(from, stringToSend, id);
-					} else {
-						await client.reply(from, data.header.error, id);
-					}
-					
-				}).catch(async (error) => {
-					await client.reply(`Perai, deu merda: ${JSON.stringify(error)}`, id);
-				});
-				
-				break;
-
-			case '!nome':
-				if (chat.id == '555591441492-1588522560@g.us') return client.reply(from, 'Consultas não são permitidas nesse grupo. Tente no PV', id);
-				if (args.length === 1) return client.reply(from, 'Ainda não adivinho coisas... preciso saber o nome também', id);
-
-				if (typeof args[1] == 'undefined') {
-					return await client.reply(from, `Coloca um . antes do nome`, id);
-				}
-
-				const nome = body.split('.')[1];
-
-				if (typeof nome === 'undefined') return client.reply(from, 'Coloca um . antes do nome', id);
-
-				await axios.post(`${URLBaseConsultas}/api/PF/NOME`, [nome], {
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'Authorization': `Bearer ${tokenConsultas}`
-					}
-				}).then(async (response) => {
-					const { data } = response;
-					if (!data.error) {
-						if (data.header.error === null) {
-							const results = data.result;
-							let stringToSend = `*=== CONSULTA REALIZADA ===*`;
-							results.forEach(result => {
-								const pessoa = result.pessoa.cadastral;
-								const {CPF, nomePrimeiro, nomeMeio, nomeUltimo, dataNascimento} = pessoa;
-								const nomeCompleto = `${nomePrimeiro || ''} ${nomeMeio || ''} ${nomeUltimo || ''}`;
-								const stringPreparada =`${CPF ? '\nCPF: '+CPF : ''} ${nomeCompleto ? '\nNome: '+nomeCompleto : ''} ${dataNascimento ? '\nData de nascimento: '+moment(dataNascimento).format('DD/MM/YYYY') : ''}\n`;
-								stringToSend += stringPreparada;
-							});
-							stringToSend += `\nConsultado por: ${pushname}`;
-							client.reply(from, stringToSend, id);
-						} else {
-							await client.reply(from, data.header.error, id);
-						}
-					} else {
-						if (data.message.includes('Para mais informações entre em contato com a TargetData.')) {
-							await client.reply(from, data.message.replaceAll('Para mais informações entre em contato com a TargetData.', ''), id);
-						} else {
-							await client.reply(from, data.message, id);
-						}
-					}
-				}).catch(async (error) => {
-					await client.reply(`Perai, deu merda: ${JSON.stringify(error)}`, id);
-				});
-				break;
-			
-			case '!telefone':
-			case '!numero':
-				if (chat.id == '555591441492-1588522560@g.us') return client.reply(from, 'Consultas não são permitidas nesse grupo. Tente no PV', id);
-				if (args.length === 1) return client.reply(from, 'Ainda não adivinho coisas... preciso saber o telefone também', id);
-				let numero;
-				if (args[1].includes('@')) {
-					numero = args[1].split('@55').join('');
-				} else {
-					numero = args[1].match(/\d/g).join("");
-				}
-				if(numero.split('')[0] == '0') numero = numero.split('').slice(1).join('');
-				
-				if(numero.length === 10) {
-					numero = numero.split('');
-					numero.splice(2, 0, 9);
-					numero = numero.join('');
-				}
-				if (numero.length !== 11) return client.reply(from, 'Digite um número válido.\nEx: 21999888212 ou mencione alguém', id);
-				await axios.post(`${URLBaseConsultas}/api/PF/TELEFONE`, [numero], {
-					headers: {
-						'Content-Type': 'application/json',
-						'Accept': 'application/json',
-						'Authorization': `Bearer ${tokenConsultas}`
-					}
-				}).then(async (response) => {
-					const { data } = response;
-					if (data.header.error === null) {
-						const results = data.result;
-						let stringToSend = `*=== CONSULTA REALIZADA ===*`;
-						results.forEach(result => {
-							const pessoa = result.pessoa.cadastral;
-							const {CPF, nomePrimeiro, nomeMeio, nomeUltimo, dataNascimento} = pessoa;
-							const nomeCompleto = `${nomePrimeiro || ''} ${nomeMeio || ''} ${nomeUltimo || ''}`;
-							const stringPreparada =`${CPF ? '\nCPF: '+CPF : ''} ${nomeCompleto ? '\nNome: '+nomeCompleto : ''} ${dataNascimento ? '\nData de nascimento: '+moment(dataNascimento).format('DD/MM/YYYY') : ''}\n`;
-							stringToSend += stringPreparada;
-						});
-						stringToSend += `\nConsultado por: ${pushname}`;
-						client.reply(from, stringToSend, id);
-					} else {
-						await client.reply(from, data.header.error, id);
-					}
-				}).catch(async (error) => {
-					await client.reply(`Perai, deu merda: ${JSON.stringify(error)}`, id);
-				});
-				break;
 			
 			case '!about':
 			case '!readme':
@@ -479,8 +333,8 @@ Consultado por: ${pushname}`;
 				let cidadeConcurso = body.split('.');
 				let concursos = request?.data?.docs;
 
-				encontrado = ``;
-				quantidade = 0;
+				let encontrado = ``;
+				let quantidade = 0;
 				console.log(concursos);
 
 				concursos.forEach(async (data) => {
@@ -542,25 +396,25 @@ Consultado por: ${pushname}`;
 					host: 'https://translate.google.com',
 				});
 
-				const dest = await path.resolve(__dirname, './media/to/translate.mp3'); // file destination
+				const dest = path.resolve(__dirname, './media/to/translate.mp3'); // file destination
 				await downloadFile(url, dest);
 				await client.sendFile(from, './media/to/translate.mp3', 'translate', 'AAAAAAAAAUHHH', id);
 				break;
 
 			case '!sorteio':
 				try {
-					if (args.length === 1) return client.reply(from, 'Como eu vou adivinhar o devo fazer?', id);
+					if (args.length === 1) return client.reply(from, 'Adiciona mais informações tipo: _!help cachumba_', id);
 
-					const command = args[1].toLowerCase();
+					const functionCommand = args[1].toLowerCase();
 					const stringTail = args.slice(2)[0]?.toLowerCase();
-					const number = '@' + from.split('-')[0];
-					const RaffleComamand = Raffle[command] || Raffle['-default'];
+					const functionNumber = '@' + from.split('-')[0];
+					const RaffleComamand = Raffle[functionCommand] || Raffle['-default'];
 
-					const raffleResponse = RaffleComamand(stringTail, pushname || number, isGroupAdmins);
+					const raffleResponse = RaffleComamand(stringTail, pushname || functionNumber, isGroupAdmins);
 
 					client.reply(from, RaffleZaplify(raffleResponse), id);
 				} catch (e) {
-					client.reply(from, `Deu merda no sorteio man, mostra isso aq pro tramonta...\n ${e}`, id);
+					client.reply(from, `Deu merda no sorteio man, mostra isso aq pro Pedro...\n ${e}`, id);
 				}
 
 				break;
@@ -569,112 +423,24 @@ Consultado por: ${pushname}`;
 			case '!youtube':
 			case '!mp3':
 				try {
-					if (args.length === 1) return client.reply(from, 'Como eu vou adivinhar o devo fazer?', id);
+					if (args.length === 1) return client.reply(from, 'Manda aí o titulo ou nome da musica', id);
 
-					const command = args[1];
+					const functionCommand = args[1];
 					const stringTail = args.slice(2).join(' ');
 
-					const YTResponse = await (youtube[command] || youtube.default)(stringTail, {
+					const YTResponse = await (youtube[functionCommand] || youtube.default)(stringTail, {
 						onFinished: (err, data) => {
 							client.sendFile(from, data?.file, '', 'AAAAAAAAAUHHH', id);
 						},
 						onProgres: (info) => console.log(info),
-						onError: (error) => client.reply(from, `Mano, deu pau. Manda esse erro aqui pro Tramonta:\n${error}`),
+						onError: (error) => client.reply(from, `Mano, deu pau. Manda esse erro aqui pro Pedro:\n${error}`),
 					});
 
 					client.reply(from, YTZaplify(YTResponse), id);
 				} catch (e) {
-					client.reply(from, `Deu merda man, mostra isso aq pro tramonta...\n${JSON.stringify(e)}`, id);
+					client.reply(from, `Deu merda man, mostra isso aq pro Pedro...\n${JSON.stringify(e)}`, id);
 				}
 				break;
-
-			case '!horoscopo':
-			case '!horóscopo':
-				if (args.length === 1) return client.reply(from, 'Como eu vou adivinhar o horoscopo?', id);
-				await client.reply(from, 'Buscando o horoscopo... pera um pouco', id);
-
-				let horoscopo = await axios.get(`https://horoscopefree.herokuapp.com/daily/pt/`);
-				const { publish, language, aries, taurus, gemini, cancer, leo, scorpio, libra, sagittarius, capricorn, aquarius, pisces, virgo } =
-					horoscopo.data;
-				switch (args[1]) {
-					case 'aries':
-						await client.sendText(from, `${aries}`);
-						break;
-					case 'touro':
-						await client.sendText(from, `${taurus}`);
-						break;
-					case 'gemios':
-					case 'gêmios':
-						await client.sendText(from, `${gemini}`);
-						break;
-					case 'cancer':
-					case 'câncer':
-						await client.sendText(from, `${cancer}`);
-						break;
-					case 'leao':
-					case 'leão':
-						await client.sendText(from, `${leo}`);
-						break;
-					case 'escorpiao':
-					case 'escorpião':
-						await client.sendText(from, `${scorpio}`);
-						break;
-					case 'libra':
-						await client.sendText(from, `${libra}`);
-						break;
-					case 'sagitario':
-					case 'sagitário':
-						await client.sendText(from, `${sagittarius}`);
-						break;
-					case 'capricornio':
-						await client.sendText(from, `${capricorn}`);
-						break;
-					case 'aquario':
-					case 'aquário':
-						await client.sendText(from, `${aquarius}`);
-						break;
-					case 'peixes':
-						await client.sendText(from, `${pisces}`);
-					case 'virgem':
-						await client.sendText(from, `${virgo}`);
-						break;
-					default:
-						await client.sendText(from, `Não encontrei nada...`);
-				}
-				break;
-
-			// case '!limpeza':
-			// 	if (!isGroupMsg) return client.reply(from, 'Este comando só pode ser usado em grupos!', id);
-			// 	if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado pelo grupo Admin!', id);
-
-			// 	await client.reply(from, `Buscando informações... pera ai`, id);
-			// 	const membros = await client.getGroupMembers(groupId);
-			// 	const grupo = await client.getGroupInfo(groupId);
-
-			// 	myArray = [];
-			// 	texto = '';
-			// 	membros.forEach(async (data, index) => {
-			// 		myArray.push({
-			// 			id: data?.id,
-			// 			name: data?.name,
-			// 			shortName: data?.shortName,
-			// 			formattedName: data?.formattedName,
-			// 			isMe: data?.isMe,
-			// 			isMyContact: data?.isMyContact,
-			// 			isPSA: data?.isPSA,
-			// 			isUser: data?.isUser,
-			// 			isWAContact: data?.isWAContact,
-			// 		});
-
-			// 		let numero = data?.id.split('@');
-			// 		texto += `\n*Número*: ${numero[0]}\n*É corporativo?* ${data?.isBusiness ? 'Sim' : 'Não'}\n-------------`;
-			// 	});
-
-			// 	let blocks = await client.getBlockedIds(id);
-
-			// 	await client.reply(from, `-------------\n*Grupo:* ${grupo?.title}\n*Bloqueados:* ${blocks.length || '0'}\n-------------\n${texto}`, id);
-
-			// 	break;
 
 			case '!buscamemes':
 			case '!buscameme':
@@ -682,14 +448,14 @@ Consultado por: ${pushname}`;
 
 				let meme = await axios.get(`https://api.imgflip.com/get_memes`);
 
-				myArray = [];
+				let myArray = [];
 				meme?.data?.data?.memes.forEach(async (data, index) => {
 					myArray.push({ url: data?.url, id: data?.id, name: data?.name });
 					myArray = myArray.sort(() => Math.random() - 0.5);
 				});
 
 				myArray.forEach(async (data, index) => {
-					urlRandom = myArray[Math.floor(Math.random() * myArray.length)];
+					let urlRandom = myArray[Math.floor(Math.random() * myArray.length)];
 					if (index < 6) {
 						await client.sendImage(from, `${urlRandom?.url}`, `bot do jhon`, `*ID:* ${urlRandom?.id}\n*REF:* ${urlRandom?.name}`);
 					}
@@ -739,15 +505,13 @@ Consultado por: ${pushname}`;
 					return await client.reply(from, `Coloca um . antes da cidade`, id);
 				}
 
-				let cidade = body.split('.');
-				console.log(typeof cidade[1]);
+				let cidade = body.split(' ').slice(1).join(' ');
+				if (typeof cidade !== 'undefined') {
+					if (cidade.length == 0) return client.reply(from, 'Preciso de uma cidade', id);
 
-				if (typeof cidade[1] !== 'undefined') {
-					if (cidade[1].length == 0) return client.reply(from, 'Preciso de uma cidade...', id);
+					await client.reply(from, `Verificando com São Pedro como está o clima em ${cidade}... pera um pouco`, id);
 
-					await client.reply(from, `Verificando com São Pedro como está o clima em ${cidade[1]}... pera um pouco`, id);
-
-					let clima = await axios.get(`https://weather.contrateumdev.com.br/api/weather/city/?city=${encodeURI(cidade[1])}`);
+					let clima = await axios.get(`https://weather.contrateumdev.com.br/api/weather/city/?city=${encodeURI(cidade)}`);
 
 					if (clima?.data?.cod == '404') return await client.reply(from, `Uai... ${clima?.data?.message}`, id);
 
@@ -758,7 +522,7 @@ Consultado por: ${pushname}`;
                 `
 					);
 				} else {
-					return client.reply(from, 'Preciso de uma cidade...', id);
+					return client.reply(from, 'Preciso de uma cidade. Ex: _!clima Fortaleza_', id);
 				}
 
 				break;
@@ -842,18 +606,20 @@ Consultado por: ${pushname}`;
 			case '!sticker':
 			case '!stiker':
 			case '!s':
+			case '!fig':
+			case '.fig':
 				if (isMedia && type === 'image') {
 					const mediaData = await decryptMedia(message, uaOverride);
 					const imageBase64 = `data:${mimetype};base64,${mediaData.toString('base64')}`;
-					await client.sendImageAsSticker(from, imageBase64, { author: 'Bot do Kauã Landi', pack: 'PackDoBot', keepScale: true });
+					await client.sendImageAsStickerAsReply(from, imageBase64,  id,{ author: 'Bot do Pedro Marinho', pack: 'PackDoBot', keepScale: true })
 				} else if (quotedMsg && quotedMsg.type == 'image') {
 					const mediaData = await decryptMedia(quotedMsg, uaOverride);
 					const imageBase64 = `data:${quotedMsg.mimetype};base64,${mediaData.toString('base64')}`;
-					await client.sendImageAsSticker(from, imageBase64, { author: 'Bot do Kauã Landi', pack: 'PackDoBot', keepScale: true });
+					await client.sendImageAsStickerAsReply(from, imageBase64, id, { author: 'Bot do Pedro Marinho', pack: 'PackDoBot', keepScale: true });
 				} else if (args.length === 2) {
 					const url = args[1];
 					if (url.match(isUrl)) {
-						await client.sendStickerfromUrl(from, url, { method: 'get' }).catch((err) => console.log('Caught exception: ', err));
+						await client.sendStickerfromUrlAsReply(from, url, id, { method: 'get' }).catch((err) => console.log('Caught exception: ', err));
 					} else {
 						client.reply(from, mess.error.Iv, id);
 					}
@@ -871,7 +637,7 @@ Consultado por: ${pushname}`;
 						client.reply(from, 'Tô fazendo a figurinha...', id);
 						await client.sendMp4AsSticker(from, `data:${mimetype};base64,${mediaData.toString('base64')}`, null, {
 							stickerMetadata: true,
-							author: 'Bot do Kauã Landi',
+							author: 'Bot do Pedro Marinho',
 							pack: 'PackDoBot',
 							fps: 10,
 							square: '512',
@@ -883,7 +649,7 @@ Consultado por: ${pushname}`;
 							client.reply(from, 'Tô fazendo a figurinha...', id);
 							await client.sendMp4AsSticker(from, `data:${quotedMsg.mimetype};base64,${mediaData.toString('base64')}`, null, {
 								stickerMetadata: true,
-								author: 'Bot do Kauã Landi',
+								author: 'Bot do Pedro Marinho',
 								pack: 'PackDoBot',
 								fps: 10,
 								square: '512',
@@ -892,6 +658,7 @@ Consultado por: ${pushname}`;
 						}
 					} else client.reply(from, 'Envie o gif com a legenda *!sg* máx. 30 segundos!', id);
 				}
+				else client.reply(from, 'Envie o gif com a legenda *!sg* máx. 30 segundos!', id);
 				break;
 			case '!modoadm':
 			case '!autoadm':
@@ -965,6 +732,7 @@ Consultado por: ${pushname}`;
 				break;
 
 			case '!ban':
+			case '.ban':
 				if (!isGroupMsg) return client.reply(from, 'Este recurso só pode ser usado em grupos', id);
 				if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado por administradores de grupo', id);
 				if (!isBotGroupAdmins) return client.reply(from, 'Este comando só pode ser usado quando o bot se torna administrador', id);
@@ -1035,17 +803,16 @@ Consultado por: ${pushname}`;
 				} else {
 					if (quotedMsgIsConsulta) {
 						const consultedFrom = quotedMsgText.split('Consultado por: ')[1];
-						if (consultedFrom == pushname || pushname == 'Kauã Landi') {
+						if (consultedFrom == pushname || pushname == 'Pedro Marinho') {
 							await client.deleteMessage(quotedMsgObj.chatId, quotedMsgObj.id, false);
 						} else {
 							return client.reply(from, 'Essa consulta não é sua, peça a um admin.', id);
 						}
 					} else {
 						if (!quotedMsgObj.fromMe) return client.reply(from, 'Eu não consigo deletar a mensagem de outro usuário!', id);
-						if (!isGroupAdmins) return client.reply(from, 'Este recurso só pode ser usado por administradores de grupo ou consultas feitas por você.', id);
 					}
 				}
-				break;
+				return client.reply(from, 'Este recurso só pode ser usado por administradores de grupo ou consultas feitas por você.', id);
 
 			case '!ajuda':
 			case '!menu':
@@ -1229,6 +996,12 @@ Consultado por: ${pushname}`;
 					}
 				});
 				break;
+			case '.toimg':
+			case '!toimg':
+				const mediaDataSticker = await decryptMedia(message.quotedMsg, uaOverride);
+				const imageBase64Sticker = `data:${message.quotedMsg.mimetype};base64,${mediaDataSticker.toString('base64')}`;
+				await client.sendImage(from, imageBase64Sticker, 'Imagem do stick','Toma ai o imagem do stick', id)
+				break;
 			case '!unvoteban':
 				if (!isGroupMsg) return client.reply(from, 'Este recurso só pode ser usado em grupos', id);
 				if (mentionedJidList.length === 0) return client.reply(from, 'Para usar este recurso, envie o comando *!unvoteban* @tagnome', id);
@@ -1296,4 +1069,11 @@ function downloadFile(url, dest) {
 			.on('error', reject)
 			.end();
 	});
+}
+
+function getCommand(message) {
+	const words = message.toLowerCase().split(' ');
+	const wordAtIndex = words.findIndex(e => e.includes("!"));
+	if(wordAtIndex === -1) return words[0]
+	return words[wordAtIndex].length === 1 ? words[wordAtIndex].concat(words[wordAtIndex+1]) : words[wordAtIndex]
 }

@@ -12,7 +12,7 @@ inputHandler['-criar'] = (raffleId, raffleCreator, isAdmin) => {
 		else
 			return {
 				responseType: 'Fail',
-				data: 'Erro desconhecido: Xingue o tramonta',
+				data: 'Erro desconhecido: Xingue o Pedro',
 			};
 	} catch (e) {
 		return {

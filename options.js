@@ -11,7 +11,7 @@ module.exports = options = (headless, start) => {
             height: 1200
         },
         popup: 3012,
-        multiDevice: true,
+        multiDevice: false,
         defaultViewport: null,
         sessionId: 'Gramont-Bot',
         headless: headless,
@@ -22,6 +22,7 @@ module.exports = options = (headless, start) => {
         useChrome: true,
         killProcessOnBrowserClose: true,
         throwErrorOnTosBlock: true,
+        inDocker: true,
         // chromiumArgs: [
         //     '--no-sandbox',
         //     '--disable-setuid-sandbox',
