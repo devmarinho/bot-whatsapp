@@ -4,3 +4,8 @@ setup:
       as: whatsapp
     - plan: browserless/chrome:latest
       as: browser
+  config:
+    S3_BUCKET: my-example-bucket
+build:
+  docker:
+    web: Dockerfile
