@@ -7,4 +7,5 @@ COPY . .
 EXPOSE 3031
 RUN chown -R node /usr/src/app
 USER node
+CMD [ "lighthouse --chrome-flags='--headless' https://github.com" ]
 CMD ["npm", "start"]
