@@ -8,4 +8,4 @@ setup:
     S3_BUCKET: my-example-bucket
 build:
   docker:
-    web: Dockerfile && wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb && sudo dpkg -i google-chrome-stable_current_amd64.deb
+    web: Dockerfile
