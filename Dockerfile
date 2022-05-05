@@ -1,6 +1,6 @@
 FROM node:lts-alpine
 ENV NODE_ENV=production
-ENV CHROME_PATH = stable
+ENV CHROME_PATH = /app/.apt/usr/bin/google-chrome
 WORKDIR /usr/src/app
 COPY ["package.json", "package-lock.json*", "npm-shrinkwrap.json*", "./"]
 RUN yarn global add lighthouse && npm install --production --silent && mv node_modules ../
