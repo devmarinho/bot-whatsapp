@@ -8,6 +8,5 @@ COPY . .
 EXPOSE 3031
 RUN chown -R node /usr/src/app
 USER node
-CMD [ "which google-chrome-stable" ] 
 
 CMD ["npm", "start"]

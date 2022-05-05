@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "which google-chrome && node index.js",
+    "start": "which google-chrome-stable && node index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js"
   },
