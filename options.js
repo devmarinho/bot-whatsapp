@@ -22,7 +22,7 @@ module.exports = options = (headless, start) => {
         useChrome: true,
         killProcessOnBrowserClose: true,
         throwErrorOnTosBlock: true,
-        inDocker: true,
+        inDocker: false,
         // chromiumArgs: [
         //     '--no-sandbox',
         //     '--disable-setuid-sandbox',
