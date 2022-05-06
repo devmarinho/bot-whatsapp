@@ -1,7 +1,7 @@
-const { create, Client, decryptMedia, ev, SimpleListener, smartUserAgent, NotificationLanguage } = require('@open-wa/wa-automate')
-const msgHandler = require('./msgHndlr')
-const options = require('./options')
-const { help } = require('./lib/help')
+import { Client, create } from '@open-wa/wa-automate'
+import help from './lib/help.js'
+import msgHandler from './msgHndlr.js'
+import options from './options.js'
 
 
 const start = async (client = new Client()) => {

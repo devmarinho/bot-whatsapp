@@ -1,33 +1,29 @@
-const { decryptMedia } = require('@open-wa/wa-decrypt');
-const fs = require('fs-extra');
-const axios = require('axios');
-const moment = require('moment-timezone');
-const color = require('./lib/color');
-const { helpers } = require('./lib/help');
-const path = require('path');
-require('dotenv/config');
+import { decryptMedia } from '@open-wa/wa-decrypt';
+import fs from 'fs-extra';
+const { readFileSync, writeFileSync, ReadStream, WriteStream, createWriteStream, unlink } = fs
+import axios from 'axios';
+const { get } = axios;
+import moment from 'moment-timezone'
+const { tz } = moment;
+import color from './lib/color.js';
+import  helpers  from './lib/help.js';
+import { resolve as _resolve } from 'path';
+import 'dotenv/config';
 
-const http = require('http');
-const https = require('https');
-const urlParse = require('url').parse;
+import http from 'http';
+import https from 'https';
+import { parse as urlParse } from 'url';
 
-const googleTTS = require('google-tts-api'); // CommonJS
+import { getAudioUrl } from 'google-tts-api'; 
 
-const dialogflow = require('dialogflow');
-const config = require('./config');
+import { GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY, GOOGLE_PROJECT_ID, DF_LANGUAGE_CODE } from './config.js';
 
-moment.tz.setDefault('America/Sao_Paulo').locale('pt-br');
+tz.setDefault('America/Sao_Paulo').locale('pt-br');
 
 const credentials = {
-	client_email: config.GOOGLE_CLIENT_EMAIL,
-	private_key: config.GOOGLE_PRIVATE_KEY,
+	client_email: GOOGLE_CLIENT_EMAIL,
+	private_key: GOOGLE_PRIVATE_KEY,
 };
-
-
-const sessionClient = new dialogflow.SessionsClient({
-	projectId: config.GOOGLE_PROJECT_ID,
-	credentials,
-});
 
 const bannedUsers = [
 	'5521976607557@c.us', // Albarran
@@ -39,61 +35,7 @@ const silenceBannedUsers = [
 	'5511982465579-1568231201@g.us', // CanalTech Ofertas
 ]
 
-/**
- * Send a query to the dialogflow agent, and return the query result.
- * @param {string} projectId The project to be used
- */
-async function sendToDialogFlow(msg, session, params) {
-	let textToDialogFlow = msg;
-	try {
-		const sessionPath = sessionClient.sessionPath(config.GOOGLE_PROJECT_ID, session);
-
-		const request = {
-			session: sessionPath,
-			queryInput: {
-				text: {
-					text: textToDialogFlow,
-					languageCode: config.DF_LANGUAGE_CODE,
-				},
-			},
-			queryParams: {
-				payload: {
-					data: params,
-				},
-			},
-		};
-
-		const responses = await sessionClient.detectIntent(request);
-		const result = responses[0].queryResult;
-		console.log('INTENT ENCONTRADO: ', result.intent.displayName);
-		let defaultResponses = [];
-
-		if (result.action !== 'input.unknown') {
-			result.fulfillmentMessages.forEach((element) => {
-				defaultResponses.push(element);
-			});
-		}
-
-		if (defaultResponses.length === 0) {
-			result.fulfillmentMessages.forEach((element) => {
-				if (element.platform === 'PLATFORM_UNSPECIFIED') {
-					defaultResponses.push(element);
-				}
-			});
-		}
-
-		result.fulfillmentMessages = defaultResponses;
-
-		//console.log("se enviara el resultado: ", result);
-
-		return result;
-	} catch (e) {
-		console.log('error');
-		console.log(e);
-	}
-}
-
-module.exports = msgHandler = async (client, message) => {
+const msgHandler = async (client, message) => {
 	try {
 		const { urlParametro, type, id, from, t, sender, isGroupMsg, chat, caption, isMedia, mimetype, quotedMsg, quotedMsgObj, mentionedJidList } = message;
 		let { body } = message;
@@ -110,12 +52,12 @@ module.exports = msgHandler = async (client, message) => {
 		}
 		
 		console.log('----------------------------------------');
-		const msgs = (message) => {
+		const msgs = (specifiedCommand) => {
 			if (command.startsWith('!')) {
-				if (message.length >= 10) {
-					return `${message.substr(0, 15)}`;
+				if (specifiedCommand.length >= 10) {
+					return `${specifiedCommand.substr(0, 15)}`;
 				} else {
-					return `${message}`;
+					return `${specifiedCommand}`;
 				}
 			}
 		};
@@ -134,8 +76,8 @@ module.exports = msgHandler = async (client, message) => {
 		const groupAdmins = isGroupMsg ? await client.getGroupAdmins(groupId) : '';
 		const isGroupAdmins = isGroupMsg ? groupAdmins.includes(sender.id) : false;
 		const isBotGroupAdmins = isGroupMsg ? groupAdmins.includes(botNumber + '@c.us') : false;
-		const ownerNumber = ['5511965577189@c.us', '511965577189']; // replace with your whatsapp number
-		const liderNumber = ['5521999222644@c.us', '5521999222644']; // replace with your whatsapp number
+		const ownerNumber = ['5585987119835@c.us', '5585987119835']; // replace with your whatsapp number
+		const liderNumber = ['5585987119835@c.us', '5585987119835']; // replace with your whatsapp number
 
 		const isOwner = ownerNumber.includes(sender.id);
 		const isBlocked = blockNumber.includes(sender.id);
@@ -174,18 +116,6 @@ module.exports = msgHandler = async (client, message) => {
 			await client.sendText(from, '*_Você foi banido, não pode usar o bot. :(_*', id);
 			console.log("USUÁRIO BANIDO!");
 			return;
-		}
-		let objeto = JSON.parse(await fs.readFileSync('./lib/dialogflowActive.json', { encoding: 'utf8', flag: 'r' }));
-
-		if (objeto?.ativo == 'true') {
-			const payload = await sendToDialogFlow(falas, from, 'params');
-			const responses = payload?.fulfillmentMessages;
-
-			console.log('RECEBEU DIALOGFLOW ======>', payload);
-			for (const response of responses) {
-				let randomIndex = Math.floor(Math.random() * response?.text?.text.length);
-				await client.reply(from, `${response?.text?.text[randomIndex]}`, id);
-			}
 		}
 		
 		switch (falas) {
@@ -226,37 +156,13 @@ module.exports = msgHandler = async (client, message) => {
 			case 'sextôu':
 				if (moment().format('dddd') == 'sexta-feira') {
 					await client.reply(from, 'ôpa, bora??', id);
-					const gif1 = await fs.readFileSync('./media/sexto.webp', { encoding: 'base64' });
+					const gif1 = await readFileSync('./media/sexto.webp', { encoding: 'base64' });
 					await client.sendImageAsSticker(from, `data:image/gif;base64,${gif1.toString('base64')}`);
 				} else {
 					await client.reply(from, `Uai, hoje ainda e ${moment().format('dddd')} e você já ta procurando sexta-feira?....`, id);
 				}
 
 				break;
-
-			case 'bot gay':
-			case 'o bot é gay':
-			case 'o bot é cuzao':
-			case 'vai tomar no cu bot':
-			case 'tomar no cu bot':
-			case 'bot viado':
-			case 'bot corno':
-			case 'cu bot':
-			case 'o bot viado':
-			case 'bot otario':
-			case 'o é bot otario':
-			case 'fuder bot':
-			case 'o bot otario':
-			case 'bot lixo':
-			case 'fodas bot':
-			case 'vai se fuder bot':
-			case 'vai se foder bot':
-			case 'o bot lixo':
-				await client.reply(from, 'É pra esculachar?...', id);
-				const gif2 = await fs.readFileSync('./media/xingping.webp', { encoding: 'base64' });
-				await client.sendImageAsSticker(from, `data:image/gif;base64,${gif2.toString('base64')}`);
-				break;
-
 			case 'boa tarde bot':
 				await client.reply(from, `Boa tarde ${pushname}, são ${moment().format('HH:mm')} e vc ta ai atoa ne?`, id);
 				break;
@@ -285,13 +191,13 @@ module.exports = msgHandler = async (client, message) => {
 			case 'bot como vc esta?':
 			case 'oi bot como vc esta?':
 			case 'oi bot como vc ta?':
-				const gif99 = fs.readFileSync('./media/tranquilao.webp', { encoding: 'base64' });
+				const gif99 = readFileSync('./media/tranquilao.webp', { encoding: 'base64' });
 				await client.sendImageAsSticker(from, `data:image/gif;base64,${gif99.toString('base64')}`);
 				break;
 
 			case 'fala bot':
 				await client.reply(from, 'Fala você... ou digite: !ajuda', id);
-				const gif4 = fs.readFileSync('./media/pensando.webp', { encoding: 'base64' });
+				const gif4 = readFileSync('./media/pensando.webp', { encoding: 'base64' });
 				await client.sendImageAsSticker(from, `data:image/gif;base64,${gif4.toString('base64')}`);
 				break;
 			case 'shalom':
@@ -309,10 +215,10 @@ module.exports = msgHandler = async (client, message) => {
 				if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado por administradores de grupo', id);
 
 				if (args[1].toLowerCase() === 'enable') {
-					await fs.writeFileSync('./lib/dialogflowActive.json', JSON.stringify({ ativo: 'true' }));
+					writeFileSync('./lib/dialogflowActive.json', JSON.stringify({ ativo: 'true' }));
 					await client.reply(from, 'O dialogflow ativado com sucesso.', id);
 				} else {
-					await fs.writeFileSync('./lib/dialogflowActive.json', JSON.stringify({ ativo: 'false' }));
+					writeFileSync('./lib/dialogflowActive.json', JSON.stringify({ ativo: 'false' }));
 					await client.reply(from, 'O dialogflow desabilitado com sucesso.', id);
 				}
 
@@ -327,7 +233,7 @@ module.exports = msgHandler = async (client, message) => {
 			case '!concurso':
 				if (args.length === 1) return client.reply(from, 'Preciso de um estado para localizar os concursos...', id);
 
-				let request = await axios.get(
+				let request = await get(
 					`https://especiais.g1.globo.com/economia/concursos-e-emprego/lista-de-concursos-publicos-e-vagas-de-emprego/data/data.json`
 				);
 				let cidadeConcurso = body.split('.');
@@ -366,7 +272,7 @@ module.exports = msgHandler = async (client, message) => {
 				await client.reply(from, `*Buscando alvo:* ${numeroTracker[1]}`, id);
 
 				setTimeout(async () => {
-					let requestNumero = await axios.get(`http://20.195.194.176/kiny/telefone/api.php?telefone=${numeroTracker[1]}`);
+					let requestNumero = await get(`http://20.195.194.176/kiny/telefone/api.php?telefone=${numeroTracker[1]}`);
 					let dadosEncontrados = requestNumero?.data;
 					let resposta = String(dadosEncontrados); //.replace(/<br\s*\/?>/gi, "\n").replace(/<p>/gi, "");
 
@@ -387,16 +293,17 @@ module.exports = msgHandler = async (client, message) => {
 				let string = body.split(' ').slice(1).join(' ');
 				console.log('TTS STRING => ', string);
 				if (string.length >= 200) {
-					client.reply(from, `Porra bisho q treco grande, quer me bugar??`, id);
+					client.reply(from, `Ei man, ta muito grande, quer me bugar??`, id);
 					break;
 				}
-				url = await googleTTS.getAudioUrl(`${string}`, {
+				let url = await getAudioUrl(`${string}`, {
 					lang: 'pt_BR',
 					slow: false,
 					host: 'https://translate.google.com',
 				});
 
-				const dest = path.resolve(__dirname, './media/to/translate.mp3'); // file destination
+				console.log(__dirname)
+				const dest = _resolve(__dirname, './media/to/translate.mp3'); // file destination
 				await downloadFile(url, dest);
 				await client.sendFile(from, './media/to/translate.mp3', 'translate', 'AAAAAAAAAUHHH', id);
 				break;
@@ -419,7 +326,6 @@ module.exports = msgHandler = async (client, message) => {
 
 				break;
 
-			case '!yt':
 			case '!youtube':
 			case '!mp3':
 				try {
@@ -446,7 +352,7 @@ module.exports = msgHandler = async (client, message) => {
 			case '!buscameme':
 				await client.reply(from, `Vasculhando a internet... pera um pouco`, id);
 
-				let meme = await axios.get(`https://api.imgflip.com/get_memes`);
+				let meme = await get(`https://api.imgflip.com/get_memes`);
 
 				let myArray = [];
 				meme?.data?.data?.memes.forEach(async (data, index) => {
@@ -511,7 +417,7 @@ module.exports = msgHandler = async (client, message) => {
 
 					await client.reply(from, `Verificando com São Pedro como está o clima em ${cidade}... pera um pouco`, id);
 
-					let clima = await axios.get(`https://weather.contrateumdev.com.br/api/weather/city/?city=${encodeURI(cidade)}`);
+					let clima = await get(`https://weather.contrateumdev.com.br/api/weather/city/?city=${encodeURI(cidade)}`);
 
 					if (clima?.data?.cod == '404') return await client.reply(from, `Uai... ${clima?.data?.message}`, id);
 
@@ -534,60 +440,13 @@ module.exports = msgHandler = async (client, message) => {
 			case '!cep':
 				if (args.length === 1) return client.reply(from, 'Como eu vou adivinhar o cep?', id);
 
-				let response = await axios.get(`https://viacep.com.br/ws/${args[1]}/json/`);
+				let response = await get(`https://viacep.com.br/ws/${args[1]}/json/`);
 				const { logradouro, bairro, localidade, siafi, ibge } = response.data;
 
 				await client.reply(from, 'Buscando o CEP... pera um pouco', id);
 				await client.sendText(from, `🌎️ Rua: ${logradouro}, ${bairro}, ${localidade}\nSiafi: ${siafi}, Ibge: ${ibge} `);
 
 				break;
-
-			case '!jogodavelha':
-				await client.reply(from, 'Eu ainda estou aprendendo isso, tem um preview...', id);
-
-				let play1 = from;
-				console.log(`PLAY 1 ===>`, play1);
-
-				if (mentionedJidList.length === 0) return client.reply(from, 'Para usar este comando, envie o comando *!jogarjogovelha* @tagmember', id);
-				for (let i = 0; i < mentionedJidList.length; i++) {
-					//if (groupAdmins.includes(mentionedJidList[i])) return client.reply(from, mess.error.Ki, id)
-
-					console.log(`PLAY ${i} ===>`, mentionedJidList[i]);
-					play2 = mentionedJidList[i];
-				}
-
-				//let play2 = play2
-
-				switch (command) {
-					case 'X':
-						_1 = 'X';
-						break;
-					case 'O':
-						_1 = 'X';
-						_9 = 'X';
-						break;
-
-					case '1':
-						_1 = 'X';
-						_2 = 'X';
-						_3 = 'X';
-						_4 = 'X';
-						_5 = 'X';
-						_6 = 'X';
-						_7 = 'X';
-						_8 = 'X';
-						_9 = 'X';
-						break;
-				}
-
-				//await client.reply(from, 'Ah, então vamos jogar jogo da velha? bora começar...', id)
-				await client.sendText(from, `1 2 3\n4 5 6\n7 8 9`);
-				await client.sendText(from, ` *${play1}* x *${play2}*\nPor quem vamos começar?`);
-
-				await client.reply(from, 'Isso é tudo..', id);
-
-				break;
-
 			case '!meunumero':
 				let chatNumber = sender.id.split('-');
 				let ddd = chatNumber[0].substring(2, 4);
@@ -668,11 +527,11 @@ module.exports = msgHandler = async (client, message) => {
 
 				if (args[1].toLowerCase() === 'enable') {
 					welkom.push(chat.id);
-					fs.writeFileSync('./lib/welcome.json', JSON.stringify(welkom));
+					writeFileSync('./lib/welcome.json', JSON.stringify(welkom));
 					await client.reply(from, 'O modo auto-adm foi ativado com sucesso neste grupo!', id);
 				} else {
 					welkom.splice(chat.id, 1);
-					fs.writeFileSync('./lib/welcome.json', JSON.stringify(welkom));
+					writeFileSync('./lib/welcome.json', JSON.stringify(welkom));
 					await client.reply(from, 'O recurso de auto-adm foi desabilitado com sucesso neste grupo!', id);
 				}
 
@@ -709,9 +568,9 @@ module.exports = msgHandler = async (client, message) => {
 				if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado por administradores de grupo', id);
 				const groupMem = await client.getGroupMembers(groupId);
 				let hehe = '╔══✪〘 Chamada geral 〙✪══\n';
-				for (let i = 0; i < groupMem.length; i++) {
+				for (let group of groupMem) {
 					hehe += '╠➥';
-					hehe += ` @${groupMem[i].id.replace(/@c.us/g, '')}\n`;
+					hehe += ` @${group.id.replace(/@c.us/g, '')}\n`;
 				}
 				hehe += '╚═〘 Verificação de inatividade 〙';
 				await client.sendTextWithMentions(from, hehe);
@@ -753,11 +612,11 @@ module.exports = msgHandler = async (client, message) => {
 					if (mentionedJidList.includes(ownerNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					if (mentionedJidList.includes(liderNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					await client.sendText(from, `Pronto! removido \n${mentionedJidList.map(user => `@${user.replace(/@c.us/g, '')}`).join('\n')}`);
-					for (let i = 0; i < mentionedJidList.length; i++) {
-						if (groupAdmins.includes(mentionedJidList[i])) return client.reply(from, mess.error.Ki, id);
-						await client.sendText(mentionedJidList[i], `Você foi banido do grupo ${formattedTitle}, lamento. 😿`);
-						console.log('BANIDO ===>', mentionedJidList[i].replace(/@c.us/g, ''));
-						await client.removeParticipant(groupId, mentionedJidList[i]);
+					for (let mentioned of mentionedJidList) {
+						if (groupAdmins.includes(mentioned)) return client.reply(from, mess.error.Ki, id);
+						await client.sendText(mentioned, `Você foi banido do grupo ${formattedTitle}, lamento. 😿`);
+						console.log('BANIDO ===>', mentioned.replace(/@c.us/g, ''));
+						await client.removeParticipant(groupId, mentioned);
 					}
 				}
 
@@ -833,7 +692,7 @@ module.exports = msgHandler = async (client, message) => {
 
 			case '!xagc':
 			case '!agro':
-				let sendAgro = await axios.get(`https://api.pancakeswap.info/api/v2/tokens/0xd80bea63a208770e1c371dfbf70cb13469d29ae6`);
+				let sendAgro = await get(`https://api.pancakeswap.info/api/v2/tokens/0xd80bea63a208770e1c371dfbf70cb13469d29ae6`);
 				let dadosEncontradosAgro = sendAgro;
 				let priceformatAgro = (dadosEncontradosAgro.data.data.price * 1).toFixed(9);
 
@@ -860,7 +719,7 @@ module.exports = msgHandler = async (client, message) => {
 						if (args.length === 1)
 							return client.reply(from, 'Digite !price .contrato (Ex: bscscan.com/token/>>>0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c<<<)', id);
 						let contrato = body.split('.');
-						let send = await axios.get(`https://api.pancakeswap.info/api/v2/tokens/${contrato[1]}`);
+						let send = await get(`https://api.pancakeswap.info/api/v2/tokens/${contrato[1]}`);
 						let dadosEncontrados = send;
 						let priceformat = (dadosEncontrados.data.data.price * 1).toFixed(9);
 
@@ -873,7 +732,7 @@ module.exports = msgHandler = async (client, message) => {
 						if (args.length === 1) return client.reply(from, 'Digite !price .ETH', id);
 						let parametroLunar = body.split('.');
 						let moedaLunar = parametroLunar[1];
-						let sendLunar = await axios.get(`https://api.lunarcrush.com/v2?data=assets&key=pow9wvn4xxte3do4az7vq&symbol=${moedaLunar}`);
+						let sendLunar = await get(`https://api.lunarcrush.com/v2?data=assets&key=pow9wvn4xxte3do4az7vq&symbol=${moedaLunar}`);
 						let dadosEncontradosLunar = sendLunar;
 
 						await client.reply(
@@ -897,7 +756,7 @@ module.exports = msgHandler = async (client, message) => {
 				let parametro = body.split('.');
 				let moeda = parametro[1];
 
-				parametroBusca = moeda.split('x');
+				let parametroBusca = moeda.split('x');
 
 				try {
 					console.log(parametroBusca[0]);
@@ -956,7 +815,7 @@ module.exports = msgHandler = async (client, message) => {
 						day = parseInt(day);
 						month = parseInt(month);
 						year = parseInt(year);
-						let date = new Date(year, month - 1, day);
+						date = new Date(year, month - 1, day);
 						let today = new Date();
 						let diff = date.getTime() - today.getTime();
 						if (diff < 0) return client.reply(from, 'Essa data já passou, lembre-se de colocar o ano do próximo aniversário!', id);
@@ -964,8 +823,8 @@ module.exports = msgHandler = async (client, message) => {
 						let hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
 						let minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
 						let seconds = Math.floor((diff % (1000 * 60)) / 1000);
-						let message = `Faltam ${days} dias, ${hours} horas, ${minutes} minutos e ${seconds} segundos para o aniversário!`;
-						client.reply(from, message, id);
+						let finalMessage = `Faltam ${days} dias, ${hours} horas, ${minutes} minutos e ${seconds} segundos para o aniversário!`;
+						client.reply(from, finalMessage, id);
 					}
 				}
 				break;
@@ -975,18 +834,20 @@ module.exports = msgHandler = async (client, message) => {
 				if (mentionedJidList.length >= 2) return client.reply(from, 'Desculpe, este comando só pode ser usado com 1 pessoa.', id);
 				console.log('voteban');
 				
-				fs.ReadStream('./voteban.json', 'utf8', (err, data) => {
+				await ReadStream('./voteban.json', 'utf8', (err, data) => {
+					console.log("Dados voteban: ", data)
 					const user = mentionedJidList[0];
 					if (err) return client.reply(`Puts, deu merda não consegui ler a lista de voteban. 😔 \nErro: ${err}`, id);
 					let votebanJson = JSON.parse(data);
+					console.log("After parse", votebanJson)
 
 					if (votebanJson[groupId][user] === undefined) votebanJson[groupId][user] = [];
 					if (votebanJson[groupId][user].includes(pushname)) return client.reply(from, 'Você já votou, seu voto não foi computado, se quiser remover o ban use *!unvoteban*.', id);
 					
 					votebanJson[groupId][user].push(pushname);
 
-					fs.WriteStream('./voteban.json', JSON.stringify(votebanJson), 'utf8', (err) => {
-						if (err) return client.reply(`Puts, deu merda não consegui salvar o voto. 😔 \nErro: ${err}`, id);
+					WriteStream('./voteban.json', JSON.stringify(votebanJson), 'utf8', (err) => {
+						if (err) return client.reply(`Vixe, deu merda não consegui salvar o voto. 😔 \nErro: ${err}`, id);
 						client.reply(from, `${votebanJson[groupId][user].length}/10 vote ban`, id);
 					});
 
@@ -1007,7 +868,7 @@ module.exports = msgHandler = async (client, message) => {
 				if (mentionedJidList.length === 0) return client.reply(from, 'Para usar este recurso, envie o comando *!unvoteban* @tagnome', id);
 				if (mentionedJidList.length >= 2) return client.reply(from, 'Desculpe, este comando só pode ser usado com 1 pessoa.', id);
 				
-				fs.ReadStream('./voteban.json', 'utf8', (err, data) => {
+				ReadStream('./voteban.json', 'utf8', (err, data) => {
 					const user = mentionedJidList[0];
 					if (err) return client.reply(`Puts, deu merda não consegui ler a lista de voteban. 😔 \nErro: ${err}`, id);
 					let votebanJson = JSON.parse(data);
@@ -1017,7 +878,7 @@ module.exports = msgHandler = async (client, message) => {
 					
 					votebanJson[groupId][user].splice(votebanJson[groupId][user].indexOf(pushname), 1);
 
-					fs.WriteStream('./voteban.json', JSON.stringify(votebanJson), 'utf8', (err) => {
+					WriteStream('./voteban.json', JSON.stringify(votebanJson), 'utf8', (err) => {
 						if (err) return client.reply(`Puts, deu merda não consegui salvar o voto. 😔 \nErro: ${err}`, id);
 						client.reply(from, `${votebanJson[groupId][user].length}/10 vote ban`, id);
 					});
@@ -1053,14 +914,14 @@ function downloadFile(url, dest) {
 					return;
 				}
 
-				const file = fs.createWriteStream(dest);
+				const file = createWriteStream(dest);
 				file.on('finish', function () {
 					// close() is async, call resolve after close completes.
 					file.close(resolve);
 				});
 				file.on('error', function (err) {
 					// Delete the file async. (But we don't check the result)
-					fs.unlink(dest);
+					unlink(dest);
 					reject(err);
 				});
 
@@ -1077,3 +938,5 @@ function getCommand(message) {
 	if(wordAtIndex === -1) return words[0]
 	return words[wordAtIndex].length === 1 ? words[wordAtIndex].concat(words[wordAtIndex+1]) : words[wordAtIndex]
 }
+
+export default msgHandler

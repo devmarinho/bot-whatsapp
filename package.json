@@ -1,6 +1,6 @@
 {
   "name": "whatsapp-bot",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -8,15 +8,15 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js"
   },
-  "author": "Jonathan",
+  "author": "Pedro",
   "license": "Apache-2.0",
   "dependencies": {
-    "@open-wa/wa-automate": "^4.20.6",
-    "@open-wa/wa-decrypt": "^2.0.1",
+    "@open-wa/wa-automate": "^4.35.13",
+    "@open-wa/wa-decrypt": "^4.4.0",
     "axios": "^0.21.2",
     "brainly-scraper": "^1.0.2",
     "chalk": "^4.1.2",
-    "dialogflow": "^1.2.0",
+    "dialogflow": "^4.0.3",
     "dotenv": "^16.0.0",
     "emoji-regex": "^9.0.0",
     "fs-extra": "^9.0.1",
@@ -40,5 +40,9 @@
   "bugs": {
     "url": "https://github.com/mhankbarbar/whatsapp-bot/issues"
   },
-  "homepage": "https://github.com/mhankbarbar/whatsapp-bot#readme"
+  "homepage": "https://github.com/mhankbarbar/whatsapp-bot#readme",
+  "type": "module",
+  "devDependencies": {
+    "@types/dialogflow": "^4.0.4"
+  }
 }
