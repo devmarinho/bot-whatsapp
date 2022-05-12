@@ -16,7 +16,7 @@
 ## Instalando o bot: 📚
 
 ```bash
-git clone https://github.com/kaualandi/bot-whatsapp.git
+git clone https://github.com/devmarinho/bot-whatsapp.git
 ```
 
 ```bash
@@ -38,31 +38,11 @@ Depois de clonar instalar o projeto, basta digitar o seguinte, e ler o QR Code e
 ```bash
 npm start
 ```
+- Entre no Whatsapp e entre em "Aparelhos Conectados"
+
+- Leia o QR Code
 
 Leu o QR Code? Tudo certo!
-
-## O que ele pode fazer?
-
-- Envia Memes
-- Envia Stickers
-- Envia Stickert Gif
-- Envia Audios
-- Fala texto digitado
-- Horoscopo
-- Busca Concursos por estado
-- Busca CEP Brasil
-- Busca Clima por cidade
-- Busca Memes e Escreve
-- Busca Memes e Escreve
-- Calcula aniversários
-
-E muito mais....
-
-### Comando inicial: ☕
-
-```bash
-oi Bruce
-```
 
 ### Merecidos créditos: 🏆
 
