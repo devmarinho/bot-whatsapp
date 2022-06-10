@@ -7,12 +7,18 @@ import moment from 'moment-timezone'
 const { tz } = moment;
 import color from './lib/color.js';
 import  helpers  from './lib/help.js';
-import { resolve as _resolve } from 'path';
+import { resolve as _resolve, dirname } from 'path';
 import 'dotenv/config';
+// import { removeBackgroundFromImageFile } from 'remove.bg'
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+import {getVideoId, searchVideo} from './youtube/youtubeCommandsHandler.js'
+import downloadMp4 from './youtube/mp4/downloadMp4.js'
+import {downloadMp3} from './youtube/mp3/downloadMp3.js'
 import http from 'http';
 import https from 'https';
-import { parse as urlParse } from 'url';
+import { parse as urlParse, fileURLToPath } from 'url';
 
 import { getAudioUrl } from 'google-tts-api'; 
 
@@ -105,11 +111,11 @@ const msgHandler = async (client, message) => {
 		//if (!isOwner) return
 
 		
-		console.log('FROM 		===>', color(pushname));
-		console.log('FROM_ID 	===>', chat.id);
-		console.log('ARGUMENTOS	===>', color(args));
-		console.log('FALAS 		===>', color(falas));
-		console.log('COMANDO 	===>', color(command));
+		// console.log('FROM 		===>', color(pushname));
+		// console.log('FROM_ID 	===>', chat.id);
+		// console.log('ARGUMENTOS	===>', color(args));
+		// console.log('FALAS 		===>', color(falas));
+		// console.log('COMANDO 	===>', color(command));
 
 		
 		if (command.startsWith('!') && bannedUsers.includes(chat.id)) {
@@ -118,6 +124,9 @@ const msgHandler = async (client, message) => {
 			return;
 		}
 		
+		if(falas.includes('Vai te lascar') && from.includes('7499409161'))
+			return client.reply(from, 'Para de xingar bahiana danada', id);
+
 		switch (falas) {
 			case 'me ajuda bot':
 			case 'me ajuda':
@@ -156,7 +165,7 @@ const msgHandler = async (client, message) => {
 			case 'sextôu':
 				if (moment().format('dddd') == 'sexta-feira') {
 					await client.reply(from, 'ôpa, bora??', id);
-					const gif1 = await readFileSync('./media/sexto.webp', { encoding: 'base64' });
+					const gif1 = readFileSync('./media/sexto.webp', { encoding: 'base64' });
 					await client.sendImageAsSticker(from, `data:image/gif;base64,${gif1.toString('base64')}`);
 				} else {
 					await client.reply(from, `Uai, hoje ainda e ${moment().format('dddd')} e você já ta procurando sexta-feira?....`, id);
@@ -296,13 +305,12 @@ const msgHandler = async (client, message) => {
 					client.reply(from, `Ei man, ta muito grande, quer me bugar??`, id);
 					break;
 				}
-				let url = await getAudioUrl(`${string}`, {
+				let url = getAudioUrl(`${string}`, {
 					lang: 'pt_BR',
 					slow: false,
 					host: 'https://translate.google.com',
 				});
 
-				console.log(__dirname)
 				const dest = _resolve(__dirname, './media/to/translate.mp3'); // file destination
 				await downloadFile(url, dest);
 				await client.sendFile(from, './media/to/translate.mp3', 'translate', 'AAAAAAAAAUHHH', id);
@@ -326,28 +334,41 @@ const msgHandler = async (client, message) => {
 
 				break;
 
-			case '!youtube':
-			case '!mp3':
-				try {
-					if (args.length === 1) return client.reply(from, 'Manda aí o titulo ou nome da musica', id);
-
-					const functionCommand = args[1];
-					const stringTail = args.slice(2).join(' ');
-
-					const YTResponse = await (youtube[functionCommand] || youtube.default)(stringTail, {
-						onFinished: (err, data) => {
-							client.sendFile(from, data?.file, '', 'AAAAAAAAAUHHH', id);
-						},
-						onProgres: (info) => console.log(info),
-						onError: (error) => client.reply(from, `Mano, deu pau. Manda esse erro aqui pro Pedro:\n${error}`),
-					});
-
-					client.reply(from, YTZaplify(YTResponse), id);
-				} catch (e) {
-					client.reply(from, `Deu merda man, mostra isso aq pro Pedro...\n${JSON.stringify(e)}`, id);
+			case '!mp4':
+				if (args.length === 1) return client.reply(from, 'Manda aí o titulo ou link do video', id);
+				const mp4IdVideo = await getVideoId(args, quotedMsg)
+				const mp4Functions = {
+					onFinished: () => {
+						client.sendFile(from, `./media/ytb/${mp4IdVideo}.mp4`, `videozin`, 'Toma ai seu video 😎👍🏽', id)
+					},
+					onError: (err) => {
+						console.error(err)
+						client.reply(from, 'Ocorreu um erro ao pegar o video', id, true)
+					}
 				}
-				break;
+				downloadMp4(mp4IdVideo, mp4Functions)
+				break
+			case '!search':
+				if (args.length === 1) return client.reply(from, 'Manda aí o titulo ou link do video', id);
+				const searchMessage = await searchVideo(args)
+				client.reply(from, searchMessage, id)
+				break
+			case '!mp3':
+				if (args.length === 1) return client.reply(from, 'Manda aí o titulo ou link do video', id);
+				const idVideo = await getVideoId(args, quotedMsg)
 
+				const functions = {
+					onFinished: (err, data) => {
+						client.sendAudio(from, `./media/ytb/${data.videoId}.mp3`, id)
+					},
+					onError: (err) => {
+						console.error(err)
+						client.reply(from, 'Ocorreu um erro ao pegar o áudio do video', id, true)
+					}
+				}
+				downloadMp3(idVideo,functions)
+				client.reply(from, 'Essa é uma boa pedida, vou baixar agora!', id)
+				break;
 			case '!buscamemes':
 			case '!buscameme':
 				await client.reply(from, `Vasculhando a internet... pera um pouco`, id);
@@ -398,7 +419,7 @@ const msgHandler = async (client, message) => {
 				await client.sendImage(
 					from,
 					`${makeMeme?.data?.data?.url}`,
-					`bot do jhon`,
+					`bot do pedro`,
 					`Pronto, meme gerado com sucesso. você pode visualizar ele aqui nesse site ${makeMeme?.data?.data?.page_url}`
 				);
 
@@ -476,9 +497,9 @@ const msgHandler = async (client, message) => {
 					const imageBase64 = `data:${quotedMsg.mimetype};base64,${mediaData.toString('base64')}`;
 					await client.sendImageAsStickerAsReply(from, imageBase64, id, { author: 'Bot do Pedro Marinho', pack: 'PackDoBot', keepScale: true });
 				} else if (args.length === 2) {
-					const url = args[1];
-					if (url.match(isUrl)) {
-						await client.sendStickerfromUrlAsReply(from, url, id, { method: 'get' }).catch((err) => console.log('Caught exception: ', err));
+					const imageUrl = args[1];
+					if (imageUrl.match(isUrl)) {
+						await client.sendStickerfromUrlAsReply(from, imageUrl, id, { method: 'get' }).catch((err) => console.log('Caught exception: ', err));
 					} else {
 						client.reply(from, mess.error.Iv, id);
 					}
@@ -490,6 +511,7 @@ const msgHandler = async (client, message) => {
 			case '!stikergif':
 			case '!sg':
 			case '!sgif':
+			case '!sg':
 				if (isMedia) {
 					if ((mimetype === 'video/mp4' && message.duration < 30) || (mimetype === 'image/gif' && message.duration < 30)) {
 						const mediaData = await decryptMedia(message, uaOverride);
@@ -502,21 +524,21 @@ const msgHandler = async (client, message) => {
 							square: '512',
 							loop: 0,
 						});
-					} else if (quotedMsg) {
-						if ((quotedMsg.mimetype === 'video/mp4' && quotedMsg.duration < 30) || (quotedMsg.mimetype === 'image/gif' && quotedMsg.duration < 30)) {
-							const mediaData = await decryptMedia(quotedMsg, uaOverride);
-							client.reply(from, 'Tô fazendo a figurinha...', id);
-							await client.sendMp4AsSticker(from, `data:${quotedMsg.mimetype};base64,${mediaData.toString('base64')}`, null, {
-								stickerMetadata: true,
-								author: 'Bot do Pedro Marinho',
-								pack: 'PackDoBot',
-								fps: 10,
-								square: '512',
-								loop: 0,
-							})
-						}
-					} else client.reply(from, 'Envie o gif com a legenda *!sg* máx. 30 segundos!', id);
+					}
 				}
+				else if (quotedMsg) {
+					if ((quotedMsg.mimetype === 'video/mp4' && quotedMsg.duration < 30) || (quotedMsg.mimetype === 'image/gif' && quotedMsg.duration < 30)) {
+						const mediaData = await decryptMedia(quotedMsg, uaOverride);
+						client.reply(from, 'Tô fazendo a figurinha...', id);
+						await client.sendMp4AsSticker(from, `data:${quotedMsg.mimetype};base64,${mediaData.toString('base64')}`, null, {
+							stickerMetadata: true,
+							author: 'Bot do Pedro Marinho',
+							pack: 'PackDoBot',
+							fps: 10,
+							square: '512',
+							loop: 0,
+						})
+					}}
 				else client.reply(from, 'Envie o gif com a legenda *!sg* máx. 30 segundos!', id);
 				break;
 			case '!modoadm':
@@ -679,14 +701,14 @@ const msgHandler = async (client, message) => {
 				const helpMode = args[1];
 
 				if(!helpMode) {
-					await client.sendText(from, helpers.help);
+					await client.reply(from, helpers.help, id);
 				} else {
-					helpMode == 'audios' && await client.sendText(from, helpers.helpAudios);
-					helpMode == 'figurinhas' && await client.sendText(from, helpers.helpFigurinhas);
-					helpMode == 'papo' && await client.sendText(from, helpers.helpPapo);
-					helpMode == 'outros' && await client.sendText(from, helpers.helpOutros);
-					helpMode == 'grupos' && await client.sendText(from, helpers.helpGrupos);
-					helpMode == 'consultas' && await client.sendText(from, helpers.helpConsultas);
+					helpMode == 'audios' && await client.reply(from, helpers.helpAudios, id);
+					helpMode == 'figurinhas' && await client.reply(from, helpers.helpFigurinhas, id);
+					helpMode == 'papo' && await client.reply(from, helpers.helpPapo, id);
+					helpMode == 'outros' && await client.reply(from, helpers.helpOutros, id);
+					helpMode == 'grupos' && await client.reply(from, helpers.helpGrupos, id);
+					helpMode == 'consultas' && await client.reply(from, helpers.helpConsultas, id);
 				}
 				break;
 

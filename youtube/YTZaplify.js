@@ -17,4 +17,4 @@ const zaplify = result => {
 
 }
 
-module.exports = zaplify;
+export default zaplify;

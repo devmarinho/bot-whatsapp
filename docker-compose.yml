@@ -6,6 +6,8 @@ services:
     image: browserless/chrome:latest
     hostname: browser
     init: true
+    volumes:
+      - "sessions:/sessions"
     ports:
       - "3000:3000"
     deploy:
@@ -25,7 +27,6 @@ services:
       FUNCTION_ENABLE_INCOGNITO_MODE: 'true'
       ENABLE_XVBF: 'true'
       CHROME_PATH: '/usr/bin/brave-browser'
-      USE_CHROME_STABLE: 'true'
       NODE_ENV: 'production'
 
   whatsappbot:
@@ -41,7 +42,6 @@ services:
       context: .
       dockerfile: ./Dockerfile
     environment:
-      NODE_ENV: production
       WA_BROWSER_WS_ENDPOINT: 'ws://browser:3000'
       WA_DISABLE_SPINS: 'true'
     ports:

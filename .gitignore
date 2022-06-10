@@ -17,3 +17,4 @@ media/to/*.mp3
 # end managed
 
 .env
+media
