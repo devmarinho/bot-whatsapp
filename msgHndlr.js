@@ -620,17 +620,20 @@ const msgHandler = async (client = new Client(), message) => {
 				if (!isGroupMsg) return client.reply(from, 'Este recurso só pode ser usado em grupos', id);
 				if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado por administradores de grupo', id);
 				if (!isBotGroupAdmins) return client.reply(from, 'Este comando só pode ser usado quando o bot se torna administrador', id);
-				
+				console.log("Vai banir")
+				console.log(mentionedJidList)
 				if(quotedMsg) {
 					const banUser = quotedMsg.author;
 					const banUserName = quotedMsg.sender.pushname;
+					console.log("banUser:", banUser,banUserName )
+
 					if (banUser == sender.id) return client.reply(from, 'Banindo a si mesmo? Ta loko?!', id);
 					if (banUser == chat.groupMetadata.owner) return client.reply(from, 'Você não pode banir o dono do grupo', id);
 					if (mentionedJidList.includes(ownerNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					if (mentionedJidList.includes(liderNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					await client.sendText(from, `Adeus ${banUserName}`);
 					await client.sendText(banUser, `Decidimos baní-lo do grupo ${formattedTitle}, lamento. 😿`);
-					await client.removeParticipant(groupId, banUser);
+					console.log(await client.removeParticipant(groupId, banUser));
 				} else {
 					if (mentionedJidList.length === 0) return client.reply(from, 'Para usar este comando, envie o comando *!ban* @tagmember', id);
 					if (mentionedJidList.includes(chat.groupMetadata.owner)) return client.reply(from, 'Você não pode banir o dono do grupo', id);
@@ -638,10 +641,11 @@ const msgHandler = async (client = new Client(), message) => {
 					if (mentionedJidList.includes(liderNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					await client.sendText(from, `Pronto! removido \n${mentionedJidList.map(user => `@${user.replace(/@c.us/g, '')}`).join('\n')}`);
 					for (let mentioned of mentionedJidList) {
+						console.log(mentioned)
 						if (groupAdmins.includes(mentioned)) return client.reply(from, mess.error.Ki, id);
 						await client.sendText(mentioned, `Você foi banido do grupo ${formattedTitle}, lamento. 😿`);
 						console.log('BANIDO ===>', mentioned.replace(/@c.us/g, ''));
-						await client.removeParticipant(groupId, mentioned);
+						console.log(await client.removeParticipant(groupId, mentioned));
 					}
 				}
 
