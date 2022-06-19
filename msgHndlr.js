@@ -313,7 +313,7 @@ const msgHandler = async (client, message) => {
 
 				const dest = _resolve(__dirname, './media/to/translate.mp3'); // file destination
 				await downloadFile(url, dest);
-				await client.sendFile(from, './media/to/translate.mp3', 'translate', 'AAAAAAAAAUHHH', id);
+				await client.sendAudio(from, './media/to/translate.mp3', 'translate', 'AAAAAAAAAUHHH', id);
 				break;
 
 			case '!sorteio':
@@ -586,6 +586,8 @@ const msgHandler = async (client, message) => {
 				break;
 
 			case '!mencionartodos':
+			case '.tagall':
+			case '!tagall':
 				if (!isGroupMsg) return client.reply(from, 'Este comando só pode ser usado em grupos!', id);
 				if (!isGroupAdmins) return client.reply(from, 'Este comando só pode ser usado por administradores de grupo', id);
 				const groupMem = await client.getGroupMembers(groupId);
@@ -906,6 +908,7 @@ const msgHandler = async (client, message) => {
 					});
 				});
 				break;
+			case '.tagall':
 			}
 			} catch (err) {
 		await client.sendText(`Puts, deu merda... Erro: ${err}`);

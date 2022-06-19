@@ -39,7 +39,11 @@ const start = async (client = new Client()) => {
                 }
             })
 
-            msgHandler(client, message)
+            try {
+                msgHandler(client, message)
+            } catch (error) {
+                client.reply(message.from, `Deu esse erro: ${error} `, message.id)
+            }
 
         }))
         
