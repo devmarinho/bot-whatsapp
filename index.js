@@ -24,6 +24,8 @@ const start = async (client = new Client()) => {
             }
         }))
 
+        sendMessageToAllGroups(client)
+
         client.onStateChanged((state) => {
             console.log('[Status do cliente]', state)
             if (state === 'CONFLICT' || state === 'UNLAUNCHED') client.forceRefocus()
@@ -73,3 +75,8 @@ create(options(true, start))
     }).catch((error) =>{
         console.log(error)
     })
+
+const sendMessageToAllGroups = async (client = new Client()) => {
+    const groups = await client.getAllGroups()
+    groups.forEach(c => client.sendText(c.id, 'Olá, estou online, podem me usar'))
+}

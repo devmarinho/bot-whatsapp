@@ -1,4 +1,5 @@
 import { decryptMedia } from '@open-wa/wa-decrypt';
+import { Client } from '@open-wa/wa-automate'
 import fs from 'fs-extra';
 const { readFileSync, writeFileSync, ReadStream, WriteStream, createWriteStream, unlink } = fs
 import axios from 'axios';
@@ -41,7 +42,7 @@ const silenceBannedUsers = [
 	'5511982465579-1568231201@g.us', // CanalTech Ofertas
 ]
 
-const msgHandler = async (client, message) => {
+const msgHandler = async (client = new Client(), message) => {
 	try {
 		const { urlParametro, type, id, from, t, sender, isGroupMsg, chat, caption, isMedia, mimetype, quotedMsg, quotedMsgObj, mentionedJidList } = message;
 		let { body } = message;
