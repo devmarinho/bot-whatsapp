@@ -639,7 +639,9 @@ const msgHandler = async (client = new Client(), message) => {
 					if (mentionedJidList.includes(chat.groupMetadata.owner)) return client.reply(from, 'Você não pode banir o dono do grupo', id);
 					if (mentionedJidList.includes(ownerNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
 					if (mentionedJidList.includes(liderNumber[0])) return client.reply(from, 'Sabe algo que não vou fazer? Banir a mim mesmo!', id);
+					console.log("chegou aqui")
 					await client.sendText(from, `Pronto! removido \n${mentionedJidList.map(user => `@${user.replace(/@c.us/g, '')}`).join('\n')}`);
+					console.log("nao quebrou")
 					for (let mentioned of mentionedJidList) {
 						console.log(mentioned)
 						if (groupAdmins.includes(mentioned)) return client.reply(from, mess.error.Ki, id);
